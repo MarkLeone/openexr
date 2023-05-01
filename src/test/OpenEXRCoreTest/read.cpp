@@ -95,7 +95,7 @@ testReadBadArgs (const std::string& tempdir)
     EXRCORE_TEST_RVAL_FAIL_MALLOC (
         EXR_ERR_OUT_OF_MEMORY, exr_start_read (&f, fn.c_str (), &cinit));
 
-    exr_set_default_memory_routines (NULL, NULL);
+    exr_set_default_memory_routines (::malloc, ::free);
 }
 
 void
