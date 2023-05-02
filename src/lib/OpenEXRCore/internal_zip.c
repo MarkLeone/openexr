@@ -234,19 +234,34 @@ undo_zip_impl (
     void*       uncompressed_data,
     uint64_t    uncompressed_size,
     void*       scratch_data,
-    uint64_t    scratch_size)
+    uint64_t    scratch_size,
+    exr_compression_t ctype)    
 {
     size_t actual_out_bytes;
     exr_result_t res;
 
     if (scratch_size < uncompressed_size) return EXR_ERR_INVALID_ARGUMENT;
 
-    res = exr_uncompress_buffer (
-        compressed_data,
-        comp_buf_size,
-        scratch_data,
-        scratch_size,
-        &actual_out_bytes);
+    switch (ctype)
+    {
+        case EXR_COMPRESSION_ZIPS:
+        case EXR_COMPRESSION_ZIP:
+            res = exr_uncompress_buffer (
+                compressed_data,
+                comp_buf_size,
+                scratch_data,
+                scratch_size,
+                &actual_out_bytes);
+            break;
+        case EXR_COMPRESSION_GDEFLATE:
+            res = exr_uncompress_buffer_gdeflate (
+                compressed_data,
+                comp_buf_size,
+                scratch_data,
+                scratch_size,
+                &actual_out_bytes);
+            break;
+    }    
 
     if (res == EXR_ERR_SUCCESS)
     {
@@ -290,13 +305,14 @@ internal_exr_undo_zip (
         uncompressed_data,
         uncompressed_size,
         decode->scratch_buffer_1,
-        decode->scratch_alloc_size_1);
+        decode->scratch_alloc_size_1,
+        EXR_COMPRESSION_ZIP);
 }
 
 /**************************************/
 
 static exr_result_t
-apply_zip_impl (exr_encode_pipeline_t* encode)
+apply_zip_impl (exr_encode_pipeline_t* encode, exr_compression_t ctype)
 {
     uint8_t*       t1   = encode->scratch_buffer_1;
     uint8_t*       t2   = t1 + (encode->packed_bytes + 1) / 2;
@@ -330,13 +346,28 @@ apply_zip_impl (exr_encode_pipeline_t* encode)
         ++t1;
     }
 
-    rv = exr_compress_buffer (
-        level,
-        encode->scratch_buffer_1,
-        encode->packed_bytes,
-        encode->compressed_buffer,
-        encode->compressed_alloc_size,
-        &compbufsz);
+    switch (ctype)
+    {
+        case EXR_COMPRESSION_ZIPS:
+        case EXR_COMPRESSION_ZIP:
+            rv = exr_compress_buffer (
+                level,
+                encode->scratch_buffer_1,
+                encode->packed_bytes,
+                encode->compressed_buffer,
+                encode->compressed_alloc_size,
+                &compbufsz);
+            break;
+        case EXR_COMPRESSION_GDEFLATE:
+            rv = exr_compress_buffer_gdeflate (
+                level,
+                encode->scratch_buffer_1,
+                encode->packed_bytes,
+                encode->compressed_buffer,
+                encode->compressed_alloc_size,
+                &compbufsz);
+            break;
+    }    
 
     if (rv == EXR_ERR_SUCCESS)
     {
@@ -375,5 +406,57 @@ internal_exr_apply_zip (exr_encode_pipeline_t* encode)
         return rv;
     }
 
-    return apply_zip_impl (encode);
+    return apply_zip_impl (encode, EXR_COMPRESSION_ZIP);
+}
+
+/**************************************/
+
+exr_result_t
+internal_exr_undo_gdeflate (
+    exr_decode_pipeline_t* decode,
+    const void*            compressed_data,
+    uint64_t               comp_buf_size,
+    void*                  uncompressed_data,
+    uint64_t               uncompressed_size)
+{
+    exr_result_t rv;
+    uint64_t scratchbufsz = uncompressed_size;
+    if ( comp_buf_size > scratchbufsz )
+        scratchbufsz = comp_buf_size;
+
+    rv = internal_decode_alloc_buffer (
+        decode,
+        EXR_TRANSCODE_BUFFER_SCRATCH1,
+        &(decode->scratch_buffer_1),
+        &(decode->scratch_alloc_size_1),
+        scratchbufsz);
+    if (rv != EXR_ERR_SUCCESS) return rv;
+    return undo_zip_impl (
+        compressed_data,
+        comp_buf_size,
+        uncompressed_data,
+        uncompressed_size,
+        decode->scratch_buffer_1,
+        decode->scratch_alloc_size_1,
+        EXR_COMPRESSION_GDEFLATE);
+}
+
+exr_result_t
+internal_exr_apply_gdeflate (exr_encode_pipeline_t* encode)
+{
+    exr_result_t rv;
+
+    rv = internal_encode_alloc_buffer (
+        encode,
+        EXR_TRANSCODE_BUFFER_SCRATCH1,
+        &(encode->scratch_buffer_1),
+        &(encode->scratch_alloc_size_1),
+        encode->packed_bytes);
+    if (rv != EXR_ERR_SUCCESS)
+    {
+        printf("ZIP: Unable to alloc scratch buffer\n");
+        return rv;
+    }
+
+    return apply_zip_impl (encode, EXR_COMPRESSION_GDEFLATE);
 }

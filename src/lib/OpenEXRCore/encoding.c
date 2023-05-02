@@ -46,6 +46,9 @@ default_compress_chunk (exr_encode_pipeline_t* encode)
         case EXR_COMPRESSION_RLE: rv = internal_exr_apply_rle (encode); break;
         case EXR_COMPRESSION_ZIP:
         case EXR_COMPRESSION_ZIPS: rv = internal_exr_apply_zip (encode); break;
+        case EXR_COMPRESSION_GDEFLATE:
+            rv = internal_exr_apply_gdeflate (encode);
+            break;
         case EXR_COMPRESSION_PIZ: rv = internal_exr_apply_piz (encode); break;
         case EXR_COMPRESSION_PXR24:
             rv = internal_exr_apply_pxr24 (encode);

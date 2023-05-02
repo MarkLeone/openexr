@@ -158,8 +158,8 @@ if(OPENEXR_ENABLE_THREADING)
 endif()
 
 option(OPENEXR_FORCE_INTERNAL_DEFLATE "Force using an internal libdeflate" OFF)
-set(OPENEXR_DEFLATE_REPO "https://github.com/ebiggers/libdeflate.git" CACHE STRING "Repo path for libdeflate source")
-set(OPENEXR_DEFLATE_TAG "v1.18" CACHE STRING "Tag to use for libdeflate source repo (defaults to primary if empty)")
+set(OPENEXR_DEFLATE_REPO "https://github.com/NVIDIA/libdeflate.git" CACHE STRING "Repo path for libdeflate source")
+set(OPENEXR_DEFLATE_TAG "gdeflate" CACHE STRING "Tag to use for libdeflate source repo (defaults to primary if empty)")
 
 if(NOT OPENEXR_FORCE_INTERNAL_DEFLATE)
   #TODO: ^^ Release should not clone from main, this is a place holder
@@ -199,6 +199,8 @@ if(NOT TARGET PkgConfig::deflate AND NOT deflate_FOUND)
     lib/deflate_compress.c
     lib/deflate_decompress.c
     lib/adler32.c
+    lib/gdeflate_compress.c
+    lib/gdeflate_decompress.c
     lib/zlib_compress.c
     lib/zlib_decompress.c)
   # don't need these

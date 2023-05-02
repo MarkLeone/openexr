@@ -125,3 +125,81 @@ exr_result_t exr_uncompress_buffer (
     return EXR_ERR_OUT_OF_MEMORY;
 }
 
+/**************************************/
+
+exr_result_t exr_compress_buffer_gdeflate (
+    int level,
+    const void *in,
+    size_t in_bytes,
+    void *out,
+    size_t out_bytes_avail,
+    size_t *actual_out )
+{
+    struct libdeflate_gdeflate_compressor *comp;
+
+    if (level < 0)
+    {
+        exr_get_default_zip_compression_level (&level);
+        /* truly unset anywhere */
+        if (level < 0)
+            level = EXR_DEFAULT_ZLIB_COMPRESS_LEVEL;
+    }
+
+    comp = libdeflate_alloc_gdeflate_compressor (level);
+    if (comp)
+    {
+        size_t outsz;
+        struct libdeflate_gdeflate_out_page out_page = {out, out_bytes_avail};
+        outsz = libdeflate_gdeflate_compress (comp, in, in_bytes, &out_page, 1);
+
+        libdeflate_free_gdeflate_compressor (comp);
+
+        if (outsz != 0)
+        {
+            if (actual_out)
+                *actual_out = outsz;
+            return EXR_ERR_SUCCESS;
+        }
+        return EXR_ERR_OUT_OF_MEMORY;
+    }
+    return EXR_ERR_OUT_OF_MEMORY;
+}
+
+/**************************************/
+
+exr_result_t exr_uncompress_buffer_gdeflate (
+    const void *in,
+    size_t in_bytes,
+    void *out,
+    size_t out_bytes_avail,
+    size_t *actual_out )
+{
+    struct libdeflate_gdeflate_decompressor *decomp;
+    enum libdeflate_result res;
+    size_t actual_in_bytes;
+    struct libdeflate_gdeflate_in_page in_page = {in, in_bytes};
+        
+    decomp = libdeflate_alloc_gdeflate_decompressor ();
+    if (decomp)
+    {
+        res = libdeflate_gdeflate_decompress (
+            decomp,
+            &in_page,
+            1,
+            out,
+            out_bytes_avail,
+            actual_out);
+
+        libdeflate_free_gdeflate_decompressor (decomp);
+
+        if (res == LIBDEFLATE_SUCCESS)
+        {
+            if (in_bytes == actual_in_bytes)
+                return EXR_ERR_SUCCESS;
+            /* it's an error to not consume the full buffer, right? */
+        }
+        return EXR_ERR_CORRUPT_CHUNK;
+    }
+    return EXR_ERR_OUT_OF_MEMORY;
+}
+

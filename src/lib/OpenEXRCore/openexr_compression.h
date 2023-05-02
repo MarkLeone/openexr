@@ -43,6 +43,23 @@ exr_result_t exr_uncompress_buffer (
     size_t out_bytes_avail,
     size_t *actual_out);
 
+EXR_EXPORT
+exr_result_t exr_compress_buffer_gdeflate (
+    int level,
+    const void *in,
+    size_t in_bytes,
+    void *out,
+    size_t out_bytes_avail,
+    size_t *actual_out);
+
+EXR_EXPORT
+exr_result_t exr_uncompress_buffer_gdeflate (
+    const void *in,
+    size_t in_bytes,
+    void *out,
+    size_t out_bytes_avail,
+    size_t *actual_out);
+
 #ifdef __cplusplus
 } /* extern "C" */
 #endif

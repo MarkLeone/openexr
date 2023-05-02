@@ -242,6 +242,10 @@ decompress_data (
             rv = internal_exr_undo_zip (
                 decode, packbufptr, packsz, unpackbufptr, unpacksz);
             break;
+        case EXR_COMPRESSION_GDEFLATE:
+            rv = internal_exr_undo_gdeflate (
+                decode, packbufptr, packsz, unpackbufptr, unpacksz);
+            break;
         case EXR_COMPRESSION_PIZ:
             rv = internal_exr_undo_piz (
                 decode, packbufptr, packsz, unpackbufptr, unpacksz);
