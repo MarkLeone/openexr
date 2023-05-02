@@ -13,11 +13,10 @@
 
 /**************************************/
 
-size_t exr_compress_max_buffer_size (size_t in_bytes)
+static size_t internal_compress_pad_buffer_size (size_t in_bytes, size_t r)
 {
-    size_t r, extra;
+    size_t extra;
 
-    r = libdeflate_zlib_compress_bound (NULL, in_bytes);
     /*
      * lib deflate has a message about needing a 9 byte boundary
      * but is unclear if it actually adds that or not
@@ -41,6 +40,20 @@ size_t exr_compress_max_buffer_size (size_t in_bytes)
     if (extra > r)
         r = extra;
     return r;
+}
+
+size_t exr_compress_max_buffer_size (size_t in_bytes)
+{
+    size_t r;
+    r = libdeflate_zlib_compress_bound (NULL, in_bytes);
+    return internal_compress_pad_buffer_size (in_bytes, r);
+}
+
+size_t exr_compress_gdeflate_max_buffer_size (size_t in_bytes)
+{
+    size_t r, out_npages;
+    r = libdeflate_gdeflate_compress_bound (NULL, in_bytes, &out_npages);
+    return internal_compress_pad_buffer_size (in_bytes, r);
 }
 
 /**************************************/

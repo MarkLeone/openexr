@@ -2356,6 +2356,7 @@ internal_exr_compute_chunk_offset_size (struct _internal_exr_part* curpart)
             case EXR_COMPRESSION_RLE:
             case EXR_COMPRESSION_ZIPS: linePerChunk = 1; break;
             case EXR_COMPRESSION_ZIP:
+            case EXR_COMPRESSION_GDEFLATE:
             case EXR_COMPRESSION_PXR24: linePerChunk = 16; break;
             case EXR_COMPRESSION_PIZ:
             case EXR_COMPRESSION_B44:

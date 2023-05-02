@@ -17,16 +17,26 @@
 static exr_result_t
 default_compress_chunk (exr_encode_pipeline_t* encode)
 {
+    size_t alloc_size;
     exr_result_t rv;
     EXR_PROMOTE_CONST_CONTEXT_AND_PART_OR_ERROR_NO_LOCK (
         encode->context, encode->part_index);
 
+    switch (part->comp_type)
+    {
+        case EXR_COMPRESSION_GDEFLATE:
+            alloc_size = exr_compress_gdeflate_max_buffer_size (encode->packed_bytes);
+            break;
+        default:
+            alloc_size = exr_compress_max_buffer_size (encode->packed_bytes);
+            break;
+    }        
     rv = internal_encode_alloc_buffer (
         encode,
         EXR_TRANSCODE_BUFFER_COMPRESSED,
         &(encode->compressed_buffer),
         &(encode->compressed_alloc_size),
-        exr_compress_max_buffer_size( encode->packed_bytes ));
+        alloc_size);
     if (rv != EXR_ERR_SUCCESS)
         return pctxt->print_error (
             pctxt,

@@ -454,7 +454,7 @@ internal_exr_apply_gdeflate (exr_encode_pipeline_t* encode)
         encode->packed_bytes);
     if (rv != EXR_ERR_SUCCESS)
     {
-        printf("ZIP: Unable to alloc scratch buffer\n");
+        printf("gdeflate: Unable to alloc scratch buffer\n");
         return rv;
     }
 

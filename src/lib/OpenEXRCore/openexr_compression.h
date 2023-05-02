@@ -20,6 +20,7 @@ extern "C" {
  * data. This may include some extra padding for headers / scratch */
 EXR_EXPORT
 size_t exr_compress_max_buffer_size (size_t in_bytes);
+size_t exr_compress_gdeflate_max_buffer_size (size_t in_bytes);
 
 /** Compresses a buffer using a zlib style compression.
  *
