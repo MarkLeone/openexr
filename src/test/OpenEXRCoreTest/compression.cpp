@@ -1292,6 +1292,7 @@ doWriteRead (
         case EXR_COMPRESSION_RLE:
         case EXR_COMPRESSION_ZIP:
         case EXR_COMPRESSION_ZIPS:
+        case EXR_COMPRESSION_GDEFLATE:
             restore.compareExact (p, "orig", "C loaded C");
             break;
         case EXR_COMPRESSION_PIZ:
@@ -1516,6 +1517,12 @@ void
 testZIPSCompression (const std::string& tempdir)
 {
     testComp (tempdir, EXR_COMPRESSION_ZIPS);
+}
+
+void
+testGdeflateCompression (const std::string& tempdir)
+{
+    testComp (tempdir, EXR_COMPRESSION_GDEFLATE);
 }
 
 void

@@ -105,6 +105,7 @@ define_openexrcore_tests(
  testRLECompression
  testZIPCompression
  testZIPSCompression
+ testGdeflateCompression
  testPIZCompression
  testPXR24Compression
  testB44Compression
