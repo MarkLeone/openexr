@@ -63,7 +63,8 @@ isValidCompression (Compression c)
         case B44_COMPRESSION:
         case B44A_COMPRESSION:
         case DWAA_COMPRESSION:
-        case DWAB_COMPRESSION: return true;
+        case DWAB_COMPRESSION:
+        case GDEFLATE_COMPRESSION: return true;
 
         default: return false;
     }
@@ -141,6 +142,7 @@ newCompressor (Compression c, size_t maxScanLineSize, const Header& hdr)
                 256,
                 DwaCompressor::STATIC_HUFFMAN);
 
+        case GDEFLATE_COMPRESSION: // TBD
         default: return 0;
     }
 }
@@ -156,7 +158,8 @@ numLinesInBuffer (Compression comp)
         case NO_COMPRESSION:
         case RLE_COMPRESSION:
         case ZIPS_COMPRESSION: return 1;
-        case ZIP_COMPRESSION: return 16;
+        case ZIP_COMPRESSION: 
+        case GDEFLATE_COMPRESSION: return 16;
         case PIZ_COMPRESSION: return 32;
         case PXR24_COMPRESSION: return 16;
         case B44_COMPRESSION:
@@ -215,6 +218,7 @@ newTileCompressor (
                 static_cast<int> (numTileLines),
                 DwaCompressor::STATIC_HUFFMAN);
 
+        case GDEFLATE_COMPRESSION: // TBD
         default: return 0;
     }
 }

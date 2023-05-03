@@ -557,6 +557,7 @@ MultiPartInputFile::Data::chunkOffsetReconstruction (
                 case ZIPS_COMPRESSION:
                 case RLE_COMPRESSION:
                 case NO_COMPRESSION: rowsizes[i] = 1; break;
+                case GDEFLATE_COMPRESSION: // TBD
                 default:
                     throw (IEX_NAMESPACE::ArgExc (
                         "Unknown compression method in chunk offset reconstruction"));

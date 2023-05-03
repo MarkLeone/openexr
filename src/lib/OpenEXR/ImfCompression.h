@@ -45,6 +45,8 @@ enum IMF_EXPORT_ENUM Compression
                           // wise and faster to decode full frames
                           // than DWAA_COMPRESSION.
 
+    GDEFLATE_COMPRESSION = 10, // gdeflate compression, in blocks of 16 scan lines
+
     NUM_COMPRESSION_METHODS // number of different compression methods
 };
 
