@@ -168,6 +168,16 @@ typedef struct _exr_encode_pipeline
      */
     size_t compressed_alloc_size;
 
+    /** Number of (contiguous) pages into which the compressed_buffer is
+     * conceptually divided.  Used only by gdeflate.
+     */
+    size_t compressed_page_count;
+
+    /** Size of pages into which the compressed_buffer is conceptually
+     * divided.  Used only by gdeflate.
+     */
+    size_t compressed_page_size;
+    
     /** A scratch buffer for intermediate results.
      *
      * If `NULL`, will be allocated during the run of the pipeline when

@@ -25,7 +25,7 @@ default_compress_chunk (exr_encode_pipeline_t* encode)
     switch (part->comp_type)
     {
         case EXR_COMPRESSION_GDEFLATE:
-            alloc_size = exr_compress_gdeflate_max_buffer_size (encode->packed_bytes);
+            alloc_size = exr_compress_gdeflate_max_buffer_size (encode->packed_bytes, &(encode->compressed_page_count), &(encode->compressed_page_size));
             break;
         default:
             alloc_size = exr_compress_max_buffer_size (encode->packed_bytes);
@@ -412,6 +412,7 @@ exr_encoding_run (
             encode->compressed_buffer     = encode->packed_buffer;
             encode->compressed_bytes      = encode->packed_bytes;
             encode->compressed_alloc_size = 0;
+            encode->compressed_page_count = 0;
 
             encode->packed_sample_count_table      = encode->sample_count_table;
             encode->packed_sample_count_alloc_size = 0;

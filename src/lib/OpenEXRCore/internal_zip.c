@@ -365,6 +365,8 @@ apply_zip_impl (exr_encode_pipeline_t* encode, exr_compression_t ctype)
                 encode->packed_bytes,
                 encode->compressed_buffer,
                 encode->compressed_alloc_size,
+                encode->compressed_page_count,
+                encode->compressed_page_size,
                 &compbufsz);
             break;
     }    

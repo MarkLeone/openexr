@@ -49,10 +49,15 @@ size_t exr_compress_max_buffer_size (size_t in_bytes)
     return internal_compress_pad_buffer_size (in_bytes, r);
 }
 
-size_t exr_compress_gdeflate_max_buffer_size (size_t in_bytes)
+size_t exr_compress_gdeflate_max_buffer_size (size_t in_bytes, size_t *out_page_count, size_t *out_page_size)
 {
-    size_t r, out_npages;
-    r = libdeflate_gdeflate_compress_bound (NULL, in_bytes, &out_npages);
+    size_t r;
+    r = libdeflate_gdeflate_compress_bound (NULL, in_bytes, out_page_count);
+
+    // According to the docs, "The upper bound on the amount of compressed data in a page can be
+    // found by dividing the function result by the 'out_npages' value."
+    *out_page_size = r / *out_page_count;
+    
     return internal_compress_pad_buffer_size (in_bytes, r);
 }
 
@@ -146,6 +151,8 @@ exr_result_t exr_compress_buffer_gdeflate (
     size_t in_bytes,
     void *out,
     size_t out_bytes_avail,
+    size_t out_page_count,
+    size_t out_page_size,
     size_t *actual_out )
 {
     struct libdeflate_gdeflate_compressor *comp;
@@ -162,8 +169,19 @@ exr_result_t exr_compress_buffer_gdeflate (
     if (comp)
     {
         size_t outsz;
-        struct libdeflate_gdeflate_out_page out_page = {out, out_bytes_avail};
-        outsz = libdeflate_gdeflate_compress (comp, in, in_bytes, &out_page, 1);
+        // The output buffer is contiguous, but gdeflate compress expects an array of pages.
+        if (out_page_count == 0)
+            out_page_count = 1;
+        struct libdeflate_gdeflate_out_page out_pages[out_page_count];
+        size_t out_bytes_remaining = out_bytes_avail;
+        for (int i = 0; i < out_page_count; ++i)
+        {
+            out_pages[i].data = (uint8_t*) out + i * out_page_size;
+            out_pages[i].nbytes = out_bytes_remaining > out_page_size ? out_page_size : out_bytes_remaining;
+            out_bytes_remaining -= out_page_size;
+        }            
+
+        outsz = libdeflate_gdeflate_compress (comp, in, in_bytes, out_pages, out_page_count);
 
         libdeflate_free_gdeflate_compressor (comp);
 
@@ -189,12 +207,12 @@ exr_result_t exr_uncompress_buffer_gdeflate (
 {
     struct libdeflate_gdeflate_decompressor *decomp;
     enum libdeflate_result res;
-    size_t actual_in_bytes;
     struct libdeflate_gdeflate_in_page in_page = {in, in_bytes};
         
     decomp = libdeflate_alloc_gdeflate_decompressor ();
     if (decomp)
     {
+        *actual_out = out_bytes_avail;
         res = libdeflate_gdeflate_decompress (
             decomp,
             &in_page,
@@ -205,13 +223,9 @@ exr_result_t exr_uncompress_buffer_gdeflate (
 
         libdeflate_free_gdeflate_decompressor (decomp);
 
-        if (res == LIBDEFLATE_SUCCESS)
-        {
-            if (in_bytes == actual_in_bytes)
-                return EXR_ERR_SUCCESS;
-            /* it's an error to not consume the full buffer, right? */
-        }
-        return EXR_ERR_CORRUPT_CHUNK;
+        return (res == LIBDEFLATE_SUCCESS)
+            ? EXR_ERR_SUCCESS
+            : EXR_ERR_CORRUPT_CHUNK;
     }
     return EXR_ERR_OUT_OF_MEMORY;
 }
