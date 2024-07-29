@@ -8,6 +8,8 @@
 
 #include <libdeflate.h>
 
+#include <string.h>
+
 /* value Aras found to be better trade off of speed vs size */
 #define EXR_DEFAULT_ZLIB_COMPRESS_LEVEL 4
 
@@ -53,12 +55,9 @@ size_t exr_compress_gdeflate_max_buffer_size (size_t in_bytes, size_t *out_page_
 {
     size_t r;
     r = libdeflate_gdeflate_compress_bound (NULL, in_bytes, out_page_count);
-
-    // According to the docs, "The upper bound on the amount of compressed data in a page can be
-    // found by dividing the function result by the 'out_npages' value."
+    r = internal_compress_pad_buffer_size (in_bytes, r);
     *out_page_size = r / *out_page_count;
-    
-    return internal_compress_pad_buffer_size (in_bytes, r);
+    return r;
 }
 
 /**************************************/
@@ -173,12 +172,12 @@ exr_result_t exr_compress_buffer_gdeflate (
         if (out_page_count == 0)
             out_page_count = 1;
         struct libdeflate_gdeflate_out_page out_pages[out_page_count];
-        size_t out_bytes_remaining = out_bytes_avail;
-        for (int i = 0; i < out_page_count; ++i)
+        size_t last_page = out_page_count - 1;
+        for (int i = 0; i <= last_page; ++i)
         {
             out_pages[i].data = (uint8_t*) out + i * out_page_size;
-            out_pages[i].nbytes = out_bytes_remaining > out_page_size ? out_page_size : out_bytes_remaining;
-            out_bytes_remaining -= out_page_size;
+            // The last page might be full sized.
+            out_pages[i].nbytes = i < last_page ? out_page_size : out_bytes_avail - last_page * out_page_size;
         }            
 
         outsz = libdeflate_gdeflate_compress (comp, in, in_bytes, out_pages, out_page_count);
@@ -189,6 +188,15 @@ exr_result_t exr_compress_buffer_gdeflate (
         {
             if (actual_out)
                 *actual_out = outsz;
+
+            // Compact the output pages in place into a contiguous chunk.
+            uint8_t *dest = out_pages[0].data + out_pages[0].nbytes;
+            for (int i = 1; i < out_page_count; ++i)
+            {
+                memmove (dest, out_pages[i].data, out_pages[i].nbytes);
+                dest += out_pages[i].nbytes;
+            }                
+            
             return EXR_ERR_SUCCESS;
         }
         return EXR_ERR_OUT_OF_MEMORY;
