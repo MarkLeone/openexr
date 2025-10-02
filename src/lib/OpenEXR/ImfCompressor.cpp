@@ -344,6 +344,10 @@ newCompressor (Compression c, size_t maxScanLineSize, const Header& hdr)
 
             return new HTCompressor (hdr, static_cast<int> (maxScanLineSize), 32);
 
+        case GDEFLATE_COMPRESSION:
+            // TBD: gdeflate compressor not yet implemented in C++ API
+            return nullptr;
+
         default: break;
     }
     // clang-format on
@@ -432,6 +436,10 @@ newTileCompressor (
                 hdr,
                 static_cast<int> (tileLineSize),
                 static_cast<int> (numTileLines));
+
+        case GDEFLATE_COMPRESSION:
+            // TBD: gdeflate tile compressor not yet implemented in C++ API
+            return nullptr;
 
         default: break;
     }
