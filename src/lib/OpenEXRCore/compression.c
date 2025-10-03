@@ -28,9 +28,13 @@
 #    include "../../../external/deflate/lib/adler32.c"
 #    include "../../../external/deflate/lib/zlib_compress.c"
 #    include "../../../external/deflate/lib/zlib_decompress.c"
+/* Internal libdeflate currently lacks gdeflate support */
 #else
 #    include <libdeflate.h>
+/* OPENEXR_ENABLE_GDEFLATE is set by CMake if external libdeflate has gdeflate */
 #endif
+#include "internal_gdeflate_wrapper.h"
+
 #include <string.h>
 
 #if (                                                                          \
@@ -242,7 +246,7 @@ exr_compress_gdeflate_max_buffer_size (
     size_t in_bytes, size_t* out_page_count, size_t* out_page_size)
 {
     size_t r;
-    r = libdeflate_gdeflate_compress_bound (NULL, in_bytes, out_page_count);
+    r = wrap_gdeflate_compress_bound (NULL, in_bytes, out_page_count);
     r = internal_compress_pad_buffer_size (in_bytes, r);
     *out_page_size = r / *out_page_count;
     return r;
@@ -263,12 +267,7 @@ exr_compress_buffer_gdeflate (
     size_t*             actual_out)
 {
     struct libdeflate_gdeflate_compressor* comp;
-#ifdef EXR_USE_CONFIG_DEFLATE_STRUCT
-    struct libdeflate_options opt = {
-        .sizeof_options = sizeof (struct libdeflate_options),
-        .malloc_func    = ctxt ? ctxt->alloc_fn : internal_exr_alloc,
-        .free_func      = ctxt ? ctxt->free_fn : internal_exr_free};
-#endif
+    exr_result_t                           rv;
 
     if (level < 0)
     {
@@ -277,15 +276,8 @@ exr_compress_buffer_gdeflate (
         if (level < 0) level = 4; /* EXR_DEFAULT_ZLIB_COMPRESS_LEVEL */
     }
 
-#ifdef EXR_USE_CONFIG_DEFLATE_STRUCT
-    comp = libdeflate_alloc_gdeflate_compressor_ex (level, &opt);
-#else
-    libdeflate_set_memory_allocator (
-        ctxt ? ctxt->alloc_fn : internal_exr_alloc,
-        ctxt ? ctxt->free_fn : internal_exr_free);
-    comp = libdeflate_alloc_gdeflate_compressor (level);
-#endif
-    if (comp)
+    rv = wrap_alloc_gdeflate_compressor (level, ctxt, &comp);
+    if (rv == EXR_ERR_SUCCESS)
     {
         size_t outsz;
         // The output buffer is contiguous, but gdeflate compress expects an array of pages.
@@ -301,10 +293,10 @@ exr_compress_buffer_gdeflate (
                               : out_bytes_avail - last_page * out_page_size;
         }
 
-        outsz = libdeflate_gdeflate_compress (
+        outsz = wrap_gdeflate_compress (
             comp, in, in_bytes, out_pages, out_page_count);
 
-        libdeflate_free_gdeflate_compressor (comp);
+        wrap_free_gdeflate_compressor (comp);
 
         if (outsz != 0)
         {
@@ -322,7 +314,7 @@ exr_compress_buffer_gdeflate (
         }
         return EXR_ERR_OUT_OF_MEMORY;
     }
-    return EXR_ERR_OUT_OF_MEMORY;
+    return rv;
 }
 
 /**************************************/
@@ -339,33 +331,21 @@ exr_uncompress_buffer_gdeflate (
     struct libdeflate_gdeflate_decompressor* decomp;
     enum libdeflate_result                   res;
     struct libdeflate_gdeflate_in_page       in_page = { in, in_bytes };
-#ifdef EXR_USE_CONFIG_DEFLATE_STRUCT
-    struct libdeflate_options opt = {
-        .sizeof_options = sizeof (struct libdeflate_options),
-        .malloc_func    = ctxt ? ctxt->alloc_fn : internal_exr_alloc,
-        .free_func      = ctxt ? ctxt->free_fn : internal_exr_free};
-#endif
+    exr_result_t                             rv;
 
-#ifdef EXR_USE_CONFIG_DEFLATE_STRUCT
-    decomp = libdeflate_alloc_gdeflate_decompressor_ex (&opt);
-#else
-    libdeflate_set_memory_allocator (
-        ctxt ? ctxt->alloc_fn : internal_exr_alloc,
-        ctxt ? ctxt->free_fn : internal_exr_free);
-    decomp = libdeflate_alloc_gdeflate_decompressor ();
-#endif
-    if (decomp)
+    rv = wrap_alloc_gdeflate_decompressor (ctxt, &decomp);
+    if (rv == EXR_ERR_SUCCESS)
     {
         *actual_out = out_bytes_avail;
-        res         = libdeflate_gdeflate_decompress (
+        res         = wrap_gdeflate_decompress (
             decomp, &in_page, 1, out, out_bytes_avail, actual_out);
 
-        libdeflate_free_gdeflate_decompressor (decomp);
+        wrap_free_gdeflate_decompressor (decomp);
 
         return (res == LIBDEFLATE_SUCCESS) ? EXR_ERR_SUCCESS
                                            : EXR_ERR_CORRUPT_CHUNK;
     }
-    return EXR_ERR_OUT_OF_MEMORY;
+    return rv;
 }
 
 /**************************************/

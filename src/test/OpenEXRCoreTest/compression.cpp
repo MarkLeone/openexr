@@ -1664,7 +1664,12 @@ testZIPSCompression (const std::string& tempdir)
 void
 testGdeflateCompression (const std::string& tempdir)
 {
+#ifdef OPENEXR_ENABLE_GDEFLATE
     testComp (tempdir, EXR_COMPRESSION_GDEFLATE);
+#else
+    std::cout << "  gdeflate support not available - test skipped" << std::endl;
+    (void) tempdir;
+#endif
 }
 
 void

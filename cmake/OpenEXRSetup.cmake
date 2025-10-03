@@ -250,6 +250,38 @@ else()
   set(EXR_DEFLATE_LIB)
 endif()
 
+#######################################
+# Check for gdeflate support in libdeflate
+#######################################
+
+# Internal libdeflate currently lacks gdeflate support
+if(OPENEXR_USE_INTERNAL_DEFLATE)
+  set(OPENEXR_ENABLE_GDEFLATE OFF)
+  message(STATUS "Using internal libdeflate - gdeflate DISABLED")
+else()
+  # Check if external libdeflate has gdeflate support
+  include(CheckCSourceCompiles)
+  set(CMAKE_REQUIRED_LIBRARIES ${EXR_DEFLATE_LIB})
+  check_c_source_compiles("
+    #include <libdeflate.h>
+    int main() {
+      struct libdeflate_gdeflate_compressor* c = 
+        libdeflate_alloc_gdeflate_compressor(1);
+      libdeflate_free_gdeflate_compressor(c);
+      return 0;
+    }
+  " HAVE_LIBDEFLATE_GDEFLATE)
+  set(CMAKE_REQUIRED_LIBRARIES)
+  
+  if(HAVE_LIBDEFLATE_GDEFLATE)
+    set(OPENEXR_ENABLE_GDEFLATE ON)
+    message(STATUS "External libdeflate has gdeflate support - ENABLED")
+  else()
+    set(OPENEXR_ENABLE_GDEFLATE OFF)
+    message(STATUS "External libdeflate lacks gdeflate support - DISABLED")
+  endif()
+endif()
+
 
 #######################################
 # Find or download OpenJPH
