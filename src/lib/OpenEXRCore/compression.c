@@ -243,7 +243,7 @@ internal_compress_pad_buffer_size (size_t in_bytes, size_t r)
 
 size_t
 exr_compress_gdeflate_max_buffer_size (
-    size_t in_bytes, size_t* out_page_count, size_t* out_page_size)
+    size_t in_bytes, uint64_t* out_page_count, uint64_t* out_page_size)
 {
     size_t r;
     r = wrap_gdeflate_compress_bound (NULL, in_bytes, out_page_count);
@@ -426,8 +426,8 @@ exr_compress_chunk (exr_encode_pipeline_t* encode)
     {
         size_t alloc_size = exr_compress_gdeflate_max_buffer_size (
             maxbytes,
-            &(encode->compressed_page_count),
-            &(encode->compressed_page_size));
+            &(encode->chunk.gdeflate_page_count),
+            &(encode->chunk.gdeflate_page_size));
         rv = internal_encode_alloc_buffer (
             encode,
             EXR_TRANSCODE_BUFFER_COMPRESSED,

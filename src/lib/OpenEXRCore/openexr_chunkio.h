@@ -51,6 +51,16 @@ typedef struct
 
     uint64_t sample_count_data_offset;
     uint64_t sample_count_table_size;
+
+    /** Number of (contiguous) pages into which the compressed_buffer is
+     * conceptually divided.  Used only by gdeflate.
+     */
+    uint64_t gdeflate_page_count;
+
+    /** Size of pages into which the compressed_buffer is conceptually
+     * divided.  Used only by gdeflate.
+     */
+    uint64_t gdeflate_page_size;
 } exr_chunk_info_t;
 
 /**************************************/

@@ -46,11 +46,14 @@ struct libdeflate_gdeflate_in_page
 
 static inline size_t
 wrap_gdeflate_compress_bound (
-    void* compressor, size_t in_bytes, size_t* out_page_count)
+    void* compressor, size_t in_bytes, uint64_t* out_page_count)
 {
 #ifdef OPENEXR_ENABLE_GDEFLATE
-    return libdeflate_gdeflate_compress_bound (
-        compressor, in_bytes, out_page_count);
+    size_t page_count;
+    size_t result = libdeflate_gdeflate_compress_bound (
+        compressor, in_bytes, &page_count);
+    *out_page_count = page_count;
+    return result;
 #else
     (void) compressor;
     (void) in_bytes;
@@ -156,12 +159,12 @@ wrap_free_gdeflate_decompressor (
 
 static inline enum libdeflate_result
 wrap_gdeflate_decompress (
-    struct libdeflate_gdeflate_decompressor*  decomp,
-    const struct libdeflate_gdeflate_in_page* in_pages,
-    size_t                                    in_page_count,
-    void*                                     out,
-    size_t                                    out_bytes_avail,
-    size_t*                                   actual_out)
+    struct libdeflate_gdeflate_decompressor* decomp,
+    struct libdeflate_gdeflate_in_page*      in_pages,
+    size_t                                   in_page_count,
+    void*                                    out,
+    size_t                                   out_bytes_avail,
+    size_t*                                  actual_out)
 {
 #ifdef OPENEXR_ENABLE_GDEFLATE
     return libdeflate_gdeflate_decompress (

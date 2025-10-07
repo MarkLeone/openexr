@@ -70,8 +70,8 @@ size_t exr_rle_uncompress_buffer (
 EXR_EXPORT
 size_t exr_compress_gdeflate_max_buffer_size (
     size_t in_bytes,
-    size_t* out_page_count,
-    size_t* out_page_size);
+    uint64_t* out_page_count,
+    uint64_t* out_page_size);
 
 /** Compresses a buffer using gdeflate compression with page-based output.
  *
