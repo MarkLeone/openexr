@@ -9,6 +9,8 @@
 #    define NOMINMAX
 #endif
 
+#include "OpenEXRConfigInternal.h"
+
 #include "write.h"
 
 #include "test_value.h"
