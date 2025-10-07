@@ -68,18 +68,12 @@ wrap_alloc_gdeflate_compressor (
     struct libdeflate_gdeflate_compressor** out_comp)
 {
 #ifdef OPENEXR_ENABLE_GDEFLATE
-#    ifdef EXR_USE_CONFIG_DEFLATE_STRUCT
-    struct libdeflate_options opt = {
-        .sizeof_options = sizeof (struct libdeflate_options),
-        .malloc_func    = ctxt ? ctxt->alloc_fn : internal_exr_alloc,
-        .free_func      = ctxt ? ctxt->free_fn : internal_exr_free};
-    *out_comp = libdeflate_alloc_gdeflate_compressor_ex (level, &opt);
-#    else
+    /* Note: gdeflate does not have _ex() allocator variants, so we always use
+     * libdeflate_set_memory_allocator() regardless of libdeflate version */
     libdeflate_set_memory_allocator (
         ctxt ? ctxt->alloc_fn : internal_exr_alloc,
         ctxt ? ctxt->free_fn : internal_exr_free);
     *out_comp = libdeflate_alloc_gdeflate_compressor (level);
-#    endif
     return *out_comp ? EXR_ERR_SUCCESS : EXR_ERR_OUT_OF_MEMORY;
 #else
     (void) level;
@@ -126,18 +120,12 @@ wrap_alloc_gdeflate_decompressor (
     struct libdeflate_gdeflate_decompressor** out_decomp)
 {
 #ifdef OPENEXR_ENABLE_GDEFLATE
-#    ifdef EXR_USE_CONFIG_DEFLATE_STRUCT
-    struct libdeflate_options opt = {
-        .sizeof_options = sizeof (struct libdeflate_options),
-        .malloc_func    = ctxt ? ctxt->alloc_fn : internal_exr_alloc,
-        .free_func      = ctxt ? ctxt->free_fn : internal_exr_free};
-    *out_decomp = libdeflate_alloc_gdeflate_decompressor_ex (&opt);
-#    else
+    /* Note: gdeflate does not have _ex() allocator variants, so we always use
+     * libdeflate_set_memory_allocator() regardless of libdeflate version */
     libdeflate_set_memory_allocator (
         ctxt ? ctxt->alloc_fn : internal_exr_alloc,
         ctxt ? ctxt->free_fn : internal_exr_free);
     *out_decomp = libdeflate_alloc_gdeflate_decompressor ();
-#    endif
     return *out_decomp ? EXR_ERR_SUCCESS : EXR_ERR_OUT_OF_MEMORY;
 #else
     (void) ctxt;
