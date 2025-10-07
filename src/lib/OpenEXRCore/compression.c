@@ -294,12 +294,23 @@ exr_compress_buffer_gdeflate (
     uint8_t* page_data_start = out_base + metadata_size;
     size_t page_data_avail = out_bytes_avail - metadata_size;
 
+    /* Allocate page info array: stack for small counts, heap for large */
+#define GDEFLATE_STACK_PAGE_THRESHOLD 256
+    struct libdeflate_gdeflate_out_page stack_pages[GDEFLATE_STACK_PAGE_THRESHOLD];
+    struct libdeflate_gdeflate_out_page* out_pages = stack_pages;
+    if (out_page_count > GDEFLATE_STACK_PAGE_THRESHOLD)
+    {
+        out_pages = (struct libdeflate_gdeflate_out_page*)
+            (ctxt ? ctxt->alloc_fn : internal_exr_alloc)(sizeof(*out_pages) * out_page_count);
+        if (!out_pages)
+            return EXR_ERR_OUT_OF_MEMORY;
+    }
+
     rv = wrap_alloc_gdeflate_compressor (level, ctxt, &comp);
     if (rv == EXR_ERR_SUCCESS)
     {
         size_t outsz;
-        struct libdeflate_gdeflate_out_page out_pages[out_page_count];
-        size_t                              last_page = out_page_count - 1;
+        size_t last_page = out_page_count - 1;
         
         /* Set up page buffers after metadata space */
         for (int i = 0; i <= last_page; ++i)
@@ -341,10 +352,16 @@ exr_compress_buffer_gdeflate (
             if (actual_out) 
                 *actual_out = metadata_size + total_compressed;
 
+            if (out_pages != stack_pages)
+                (ctxt ? ctxt->free_fn : internal_exr_free)(out_pages);
             return EXR_ERR_SUCCESS;
         }
+        if (out_pages != stack_pages)
+            (ctxt ? ctxt->free_fn : internal_exr_free)(out_pages);
         return EXR_ERR_OUT_OF_MEMORY;
     }
+    if (out_pages != stack_pages)
+        (ctxt ? ctxt->free_fn : internal_exr_free)(out_pages);
     return rv;
 }
 
