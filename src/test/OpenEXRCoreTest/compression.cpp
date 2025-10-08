@@ -688,9 +688,9 @@ struct pixels
         }
     }
 };
-static const int IMG_WIDTH    = 1371;
+static const int IMG_WIDTH    = 2049;  // large enough to trigger a multi-page chunk in gdeflate
 static const int IMG_HEIGHT   = 159;
-static const int IMG_STRIDE_X = 1376;
+static const int IMG_STRIDE_X = 2064;
 static const int IMG_DATA_X   = 17;
 static const int IMG_DATA_Y   = 29;
 
