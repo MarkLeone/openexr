@@ -249,22 +249,22 @@ exr_compress_gdeflate_max_buffer_size (
     size_t   metadata_size;
     uint64_t page_count = 0;
     size_t   page_size  = 0;
-    
+
     r = wrap_gdeflate_compress_bound (NULL, in_bytes, &page_count);
     r = internal_compress_pad_buffer_size (in_bytes, r);
 
     if (page_count == 0) page_count = 1;
 
-    /* The gdeflate page size is 64KB, but that's not exposed in the API.*/
+    /* The gdeflate page size is 64KB, but that's not exposed in the API. */
     page_size = r / (size_t) page_count;
 
     if (out_page_count) *out_page_count = page_count;
-    if (out_page_size) *out_page_size = page_size;
+    if (out_page_size) *out_page_size   = page_size;
 
     /* Add space for page metadata: page_count + page_sizes array */
-    metadata_size = sizeof(uint32_t) * (1 + *out_page_count);
+    metadata_size = sizeof (uint32_t) * (1 + page_count);
     r += metadata_size;
-    
+
     return r;
 }
 
@@ -280,34 +280,34 @@ exr_compress_buffer_gdeflate (
     size_t              out_bytes_avail,
     size_t*             actual_out)
 {
-    enum GdeflateStackThreshold { GDEFLATE_STACK_PAGE_THRESHOLD = 256 };
-    uint64_t                               page_count = 0;
-    size_t                                 metadata_size, page_data_avail;
+    enum { GDEFLATE_STACK_PAGE_THRESHOLD = 256 };
+    uint64_t                               page_count    = 0;
+    size_t                                 metadata_size = 0;
+    size_t                                 page_data_avail;
     size_t                                 out_page_size = 0;
-    size_t                                 i;
-    uint8_t*                               out_base, *page_data_start;
+    uint8_t*                               out_base;
+    uint8_t*                               page_data_start;
     struct libdeflate_gdeflate_out_page    stack_pages[GDEFLATE_STACK_PAGE_THRESHOLD];
     struct libdeflate_gdeflate_out_page*   out_pages;
     struct libdeflate_gdeflate_compressor* comp;
     exr_result_t                           rv;
+    size_t                                 i;
 
     if (level < 0)
     {
         exr_get_default_zip_compression_level (&level);
         /* truly unset anywhere */
-        if (level < 0) level = 4; /* EXR_DEFAULT_ZLIB_COMPRESS_LEVEL */
+        if (level < 0) level = EXR_DEFAULT_ZLIB_COMPRESS_LEVEL;
     }
 
     exr_compress_gdeflate_max_buffer_size (in_bytes, &page_count, &out_page_size);
-    if (page_count == 0)
-        return EXR_ERR_OUT_OF_MEMORY;
-    
+    if (page_count == 0) return EXR_ERR_OUT_OF_MEMORY;
+
     /* Reserve space for page metadata at beginning of output buffer */
-    metadata_size = sizeof(uint32_t) * (1 + page_count);
-    if (out_bytes_avail < metadata_size)
-        return EXR_ERR_OUT_OF_MEMORY;
-    
-    out_base = (uint8_t*)out;
+    metadata_size = sizeof (uint32_t) * (1 + page_count);
+    if (out_bytes_avail < metadata_size) return EXR_ERR_OUT_OF_MEMORY;
+
+    out_base        = (uint8_t*) out;
     page_data_start = out_base + metadata_size;
     page_data_avail = out_bytes_avail - metadata_size;
 
@@ -315,50 +315,50 @@ exr_compress_buffer_gdeflate (
     if (page_count > GDEFLATE_STACK_PAGE_THRESHOLD)
     {
         out_pages = (struct libdeflate_gdeflate_out_page*)
-            (ctxt ? ctxt->alloc_fn : internal_exr_alloc)(sizeof(*out_pages) * page_count);
-        if (!out_pages)
-            return EXR_ERR_OUT_OF_MEMORY;
+            (ctxt ? ctxt->alloc_fn : internal_exr_alloc) (
+                sizeof (*out_pages) * page_count);
+        if (!out_pages) return EXR_ERR_OUT_OF_MEMORY;
     }
 
     rv = wrap_alloc_gdeflate_compressor (level, ctxt, &comp);
     if (rv == EXR_ERR_SUCCESS)
     {
-        size_t outsz;
         size_t last_page = page_count - 1;
-        
+        size_t outsz;
+
         /* Set up page buffers after metadata space */
-        for (int i = 0; i <= last_page; ++i)
+        for (i = 0; i <= last_page; ++i)
         {
             out_pages[i].data = page_data_start + i * out_page_size;
             out_pages[i].nbytes =
-                i < last_page ? out_page_size
-                              : page_data_avail - last_page * out_page_size;
+                (i < last_page) ? out_page_size
+                                : page_data_avail - last_page * out_page_size;
         }
 
         outsz = wrap_gdeflate_compress (
-            comp, in, in_bytes, out_pages, page_count);
+            comp, in, in_bytes, out_pages, (size_t) page_count);
 
         wrap_free_gdeflate_compressor (comp);
 
         if (outsz != 0)
         {
             uint32_t* metadata;
-            size_t    total_compressed;
             uint8_t*  dest;
-            
+            size_t    total_compressed = 0;
+
             /* Write page metadata to beginning of buffer:
-             * [page_count][page_0_size][page_1_size]...[page_N-1_size]
-             * followed by contiguous compressed page data */
-            metadata = (uint32_t*)out_base;
-            metadata[0] = (uint32_t)page_count;
-            
-            total_compressed = 0;
+             * [page_count][page_0_size][page_1_size]...[page_{N-1}_size]
+             * followed by contiguous compressed page data.
+             */
+            metadata    = (uint32_t*) out_base;
+            metadata[0] = (uint32_t) page_count;
+
             for (i = 0; i < page_count; ++i)
             {
-                metadata[i + 1] = (uint32_t)out_pages[i].nbytes;
+                metadata[i + 1] = (uint32_t) out_pages[i].nbytes;
                 total_compressed += out_pages[i].nbytes;
             }
-            
+
             /* Compact the compressed page data to immediately follow metadata */
             dest = page_data_start;
             for (i = 0; i < page_count; ++i)
@@ -366,18 +366,19 @@ exr_compress_buffer_gdeflate (
                 memmove (dest, out_pages[i].data, out_pages[i].nbytes);
                 dest += out_pages[i].nbytes;
             }
-            
-            if (actual_out) 
-                *actual_out = metadata_size + total_compressed;
+
+            if (actual_out) *actual_out = metadata_size + total_compressed;
 
             if (out_pages != stack_pages)
-                (ctxt ? ctxt->free_fn : internal_exr_free)(out_pages);
+                (ctxt ? ctxt->free_fn : internal_exr_free) (out_pages);
             return EXR_ERR_SUCCESS;
         }
+
         if (out_pages != stack_pages)
-            (ctxt ? ctxt->free_fn : internal_exr_free)(out_pages);
+            (ctxt ? ctxt->free_fn : internal_exr_free) (out_pages);
         return EXR_ERR_OUT_OF_MEMORY;
     }
+
     return rv;
 }
 
@@ -393,58 +394,53 @@ exr_uncompress_buffer_gdeflate (
     size_t*             actual_out)
 {
     enum { GDEFLATE_STACK_PAGE_THRESHOLD = 256 };
-    uint32_t                             page_count, i;
+    uint32_t                             page_count;
     size_t                               metadata_size;
     const uint8_t*                       in_base;
     const uint32_t*                      metadata;
     struct libdeflate_gdeflate_in_page   stack_pages[GDEFLATE_STACK_PAGE_THRESHOLD];
     struct libdeflate_gdeflate_in_page*  in_pages;
     exr_result_t                         rv;
-    
-    in_base = (const uint8_t*)in;
-    
-    /* Read and validate page metadata: [page_count][page_0_size]...[page_N-1_size] */
-    if (in_bytes < sizeof(uint32_t))
-        return EXR_ERR_CORRUPT_CHUNK;
-    
-    metadata = (const uint32_t*)in_base;
-    page_count = metadata[0];
-    metadata_size = sizeof(uint32_t) * (1 + page_count);
-    
-    if (page_count == 0 || in_bytes < metadata_size)
-        return EXR_ERR_CORRUPT_CHUNK;
-    
+    size_t                               i;
+
+    in_base = (const uint8_t*) in;
+
+    /* Read and validate page metadata: [page_count][page_0_size]...[page_{N-1}_size] */
+    if (in_bytes < sizeof (uint32_t)) return EXR_ERR_CORRUPT_CHUNK;
+
+    metadata      = (const uint32_t*) in_base;
+    page_count    = metadata[0];
+    metadata_size = sizeof (uint32_t) * (1 + page_count);
+
+    if (page_count == 0 || in_bytes < metadata_size) return EXR_ERR_CORRUPT_CHUNK;
+
     /* Allocate page info array: stack for small counts, heap for large */
     in_pages = stack_pages;
     if (page_count > GDEFLATE_STACK_PAGE_THRESHOLD)
     {
         in_pages = (struct libdeflate_gdeflate_in_page*)
-            (ctxt ? ctxt->alloc_fn : internal_exr_alloc)(sizeof(*in_pages) * page_count);
-        if (!in_pages)
-            return EXR_ERR_OUT_OF_MEMORY;
+            (ctxt ? ctxt->alloc_fn : internal_exr_alloc) (
+                sizeof (*in_pages) * page_count);
+        if (!in_pages) return EXR_ERR_OUT_OF_MEMORY;
     }
-    
-    /* Calculate page data pointers from metadata.*/
+
+    /* Calculate page data pointers from metadata. */
     {
-        const uint8_t* page_data;
-        size_t         offset;
-        uint32_t       page_size;
-        
-        page_data = in_base + metadata_size;
-        offset = 0;
+        const uint8_t* page_data = in_base + metadata_size;
+        size_t         offset    = 0;
+
         for (i = 0; i < page_count; ++i)
         {
-            page_size = metadata[i + 1];
-            
+            uint32_t page_size = metadata[i + 1];
+
             if (offset + page_size > in_bytes - metadata_size)
             {
-                /* Free page info if it wasn't stack allocated. */
                 if (in_pages != stack_pages)
-                    (ctxt ? ctxt->free_fn : internal_exr_free)(in_pages);
+                    (ctxt ? ctxt->free_fn : internal_exr_free) (in_pages);
                 return EXR_ERR_CORRUPT_CHUNK;
             }
-            
-            in_pages[i].data = page_data + offset;
+
+            in_pages[i].data   = page_data + offset;
             in_pages[i].nbytes = page_size;
             offset += page_size;
         }
@@ -453,24 +449,29 @@ exr_uncompress_buffer_gdeflate (
     {
         struct libdeflate_gdeflate_decompressor* decomp;
         enum libdeflate_result                   res;
-        
+
         rv = wrap_alloc_gdeflate_decompressor (ctxt, &decomp);
         if (rv == EXR_ERR_SUCCESS)
         {
-            *actual_out = 0;
+            if (actual_out) *actual_out = 0;
             res = wrap_gdeflate_decompress (
-                decomp, in_pages, page_count, out, out_bytes_avail, actual_out);
+                decomp,
+                in_pages,
+                (size_t) page_count,
+                out,
+                out_bytes_avail,
+                actual_out);
 
             wrap_free_gdeflate_decompressor (decomp);
-            
+
             rv = (res == LIBDEFLATE_SUCCESS) ? EXR_ERR_SUCCESS
                                              : EXR_ERR_CORRUPT_CHUNK;
         }
     }
-    
+
     if (in_pages != stack_pages)
-        (ctxt ? ctxt->free_fn : internal_exr_free)(in_pages);
-    
+        (ctxt ? ctxt->free_fn : internal_exr_free) (in_pages);
+
     return rv;
 }
 

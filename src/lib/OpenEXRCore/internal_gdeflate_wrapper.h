@@ -8,12 +8,12 @@
 
 /*
  * GDEFLATE SUPPORT WRAPPERS
- * 
+ *
  * Conditional compilation for gdeflate support is isolated here.
  * OPENEXR_ENABLE_GDEFLATE is set by CMake based on libdeflate detection.
- * 
- * Note: This header must be included AFTER libdeflate.h (or internal deflate sources)
- * are already included, as it depends on libdeflate types.
+ *
+ * Note: This header must be included after libdeflate.h (or internal deflate
+ * sources) are already included, as it depends on libdeflate types.
  */
 
 #include "internal_memory.h"
@@ -23,7 +23,7 @@
 /* libdeflate types already available via compression.c includes */
 
 #ifndef OPENEXR_ENABLE_GDEFLATE
-// Stub types when gdeflate not available
+/* Stub types when gdeflate not available */
 struct libdeflate_gdeflate_compressor
 {
     int unused;
@@ -64,7 +64,8 @@ wrap_gdeflate_compress_bound (
 
 static inline exr_result_t
 wrap_alloc_gdeflate_compressor (
-    int level, exr_const_context_t ctxt,
+    int level,
+    exr_const_context_t ctxt,
     struct libdeflate_gdeflate_compressor** out_comp)
 {
 #ifdef OPENEXR_ENABLE_GDEFLATE
@@ -95,11 +96,11 @@ wrap_free_gdeflate_compressor (struct libdeflate_gdeflate_compressor* comp)
 
 static inline size_t
 wrap_gdeflate_compress (
-    struct libdeflate_gdeflate_compressor*    comp,
-    const void*                               in,
-    size_t                                    in_bytes,
-    struct libdeflate_gdeflate_out_page*      out_pages,
-    size_t                                    out_page_count)
+    struct libdeflate_gdeflate_compressor*  comp,
+    const void*                             in,
+    size_t                                  in_bytes,
+    struct libdeflate_gdeflate_out_page*    out_pages,
+    size_t                                  out_page_count)
 {
 #ifdef OPENEXR_ENABLE_GDEFLATE
     return libdeflate_gdeflate_compress (
@@ -148,11 +149,11 @@ wrap_free_gdeflate_decompressor (
 static inline enum libdeflate_result
 wrap_gdeflate_decompress (
     struct libdeflate_gdeflate_decompressor* decomp,
-    struct libdeflate_gdeflate_in_page*      in_pages,
-    size_t                                   in_page_count,
-    void*                                    out,
-    size_t                                   out_bytes_avail,
-    size_t*                                  actual_out)
+    struct libdeflate_gdeflate_in_page*    in_pages,
+    size_t                                 in_page_count,
+    void*                                  out,
+    size_t                                 out_bytes_avail,
+    size_t*                                actual_out)
 {
 #ifdef OPENEXR_ENABLE_GDEFLATE
     return libdeflate_gdeflate_decompress (

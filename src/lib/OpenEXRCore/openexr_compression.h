@@ -65,8 +65,8 @@ size_t exr_rle_uncompress_buffer (
     const void* in,
     void* out);
 
-/** Computes a buffer that will be large enough to hold the gdeflate compressed
- * data, and returns the page count and page size needed for compression. */
+/** Computes a buffer large enough to hold gdeflate-compressed data and returns
+ * the page count and size required for compression. */
 EXR_EXPORT
 size_t exr_compress_gdeflate_max_buffer_size (
     size_t in_bytes,

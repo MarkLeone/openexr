@@ -278,12 +278,12 @@ undo_zip_impl (
     const void*            compressed_data,
     const uint64_t         comp_buf_size,
     void*                  uncompressed_data,
-    const uint64_t         uncompressed_size,
+    uint64_t               uncompressed_size,
     void*                  scratch_data,
-    const uint64_t         scratch_size)
+    uint64_t               scratch_size)
 {
-    size_t       actual_out_bytes;
     exr_result_t res;
+    size_t       actual_out_bytes = 0;
 
     if (scratch_size < uncompressed_size) return EXR_ERR_INVALID_ARGUMENT;
 
@@ -433,9 +433,9 @@ internal_exr_apply_zip (exr_encode_pipeline_t* encode)
 static exr_result_t
 apply_gdeflate_impl (exr_encode_pipeline_t* encode)
 {
-    int          level;
-    size_t       compbufsz;
     exr_result_t rv;
+    size_t       compbufsz = 0;
+    int          level;
 
     rv = exr_get_zip_compression_level (
         encode->context, encode->part_index, &level);
@@ -453,27 +453,26 @@ apply_gdeflate_impl (exr_encode_pipeline_t* encode)
         encode->compressed_alloc_size,
         &compbufsz);
 
-    if (rv == EXR_ERR_SUCCESS)
-    {
-        if (compbufsz > encode->packed_bytes)
-        {
-            memcpy (
-                encode->compressed_buffer,
-                encode->packed_buffer,
-                encode->packed_bytes);
-            compbufsz = encode->packed_bytes;
-        }
-        encode->compressed_bytes = compbufsz;
-    }
-    else
+    if (rv != EXR_ERR_SUCCESS)
     {
         exr_const_context_t pctxt = encode->context;
         if (pctxt)
             pctxt->report_error (
                 pctxt, rv, "Unable to compress gdeflate data");
+        return rv;
     }
 
-    return rv;
+    if (compbufsz > encode->packed_bytes)
+    {
+        memcpy (
+            encode->compressed_buffer,
+            encode->packed_buffer,
+            encode->packed_bytes);
+        compbufsz = encode->packed_bytes;
+    }
+    encode->compressed_bytes = compbufsz;
+
+    return EXR_ERR_SUCCESS;
 }
 
 exr_result_t
