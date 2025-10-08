@@ -527,18 +527,17 @@ undo_gdeflate_impl (
         scratch_size,
         &actual_out_bytes);
 
-    if (res == EXR_ERR_SUCCESS)
-    {
-        decode->bytes_decompressed = actual_out_bytes;
-        if (comp_buf_size > actual_out_bytes ||
-            actual_out_bytes > uncompressed_size)
-            res = EXR_ERR_CORRUPT_CHUNK;
-        else
-            internal_zip_reconstruct_bytes (
-                uncompressed_data, scratch_data, actual_out_bytes);
-    }
+    if (res != EXR_ERR_SUCCESS) return res;
 
-    return res;
+    decode->bytes_decompressed = actual_out_bytes;
+    if (comp_buf_size > actual_out_bytes ||
+        actual_out_bytes > uncompressed_size)
+        return EXR_ERR_CORRUPT_CHUNK;
+
+    internal_zip_reconstruct_bytes (
+        uncompressed_data, scratch_data, actual_out_bytes);
+
+    return EXR_ERR_SUCCESS;
 }
 
 exr_result_t

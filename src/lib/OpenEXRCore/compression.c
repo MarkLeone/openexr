@@ -289,7 +289,7 @@ exr_compress_buffer_gdeflate (
     uint8_t*                               page_data_start;
     struct libdeflate_gdeflate_out_page    stack_pages[GDEFLATE_STACK_PAGE_THRESHOLD];
     struct libdeflate_gdeflate_out_page*   out_pages;
-    struct libdeflate_gdeflate_compressor* comp;
+    struct libdeflate_gdeflate_compressor* comp = NULL;
     exr_result_t                           rv;
     size_t                                 i;
 
@@ -321,7 +321,8 @@ exr_compress_buffer_gdeflate (
     }
 
     rv = wrap_alloc_gdeflate_compressor (level, ctxt, &comp);
-    if (rv == EXR_ERR_SUCCESS)
+    if (rv != EXR_ERR_SUCCESS) goto cleanup;
+
     {
         size_t last_page = page_count - 1;
         size_t outsz;
@@ -339,8 +340,14 @@ exr_compress_buffer_gdeflate (
             comp, in, in_bytes, out_pages, (size_t) page_count);
 
         wrap_free_gdeflate_compressor (comp);
+        comp = NULL;
 
-        if (outsz != 0)
+        if (outsz == 0)
+        {
+            rv = EXR_ERR_OUT_OF_MEMORY;
+            goto cleanup;
+        }
+
         {
             uint32_t* metadata;
             uint8_t*  dest;
@@ -368,17 +375,15 @@ exr_compress_buffer_gdeflate (
             }
 
             if (actual_out) *actual_out = metadata_size + total_compressed;
-
-            if (out_pages != stack_pages)
-                (ctxt ? ctxt->free_fn : internal_exr_free) (out_pages);
-            return EXR_ERR_SUCCESS;
         }
 
-        if (out_pages != stack_pages)
-            (ctxt ? ctxt->free_fn : internal_exr_free) (out_pages);
-        return EXR_ERR_OUT_OF_MEMORY;
+        rv = EXR_ERR_SUCCESS;
     }
 
+cleanup:
+    if (comp) wrap_free_gdeflate_compressor (comp);
+    if (out_pages != stack_pages)
+        (ctxt ? ctxt->free_fn : internal_exr_free) (out_pages);
     return rv;
 }
 
@@ -451,24 +456,23 @@ exr_uncompress_buffer_gdeflate (
         enum libdeflate_result                   res;
 
         rv = wrap_alloc_gdeflate_decompressor (ctxt, &decomp);
-        if (rv == EXR_ERR_SUCCESS)
-        {
-            if (actual_out) *actual_out = 0;
-            res = wrap_gdeflate_decompress (
-                decomp,
-                in_pages,
-                (size_t) page_count,
-                out,
-                out_bytes_avail,
-                actual_out);
+        if (rv != EXR_ERR_SUCCESS) goto cleanup;
 
-            wrap_free_gdeflate_decompressor (decomp);
+        if (actual_out) *actual_out = 0;
+        res = wrap_gdeflate_decompress (
+            decomp,
+            in_pages,
+            (size_t) page_count,
+            out,
+            out_bytes_avail,
+            actual_out);
 
-            rv = (res == LIBDEFLATE_SUCCESS) ? EXR_ERR_SUCCESS
-                                             : EXR_ERR_CORRUPT_CHUNK;
-        }
+        wrap_free_gdeflate_decompressor (decomp);
+
+        rv = (res == LIBDEFLATE_SUCCESS) ? EXR_ERR_SUCCESS : EXR_ERR_CORRUPT_CHUNK;
     }
 
+cleanup:
     if (in_pages != stack_pages)
         (ctxt ? ctxt->free_fn : internal_exr_free) (in_pages);
 
