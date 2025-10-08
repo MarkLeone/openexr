@@ -451,8 +451,6 @@ apply_gdeflate_impl (exr_encode_pipeline_t* encode)
         encode->packed_bytes,
         encode->compressed_buffer,
         encode->compressed_alloc_size,
-        encode->chunk.gdeflate_page_count,
-        encode->chunk.gdeflate_page_size,
         &compbufsz);
 
     if (rv == EXR_ERR_SUCCESS)

@@ -347,7 +347,6 @@ exr_encoding_run (
             encode->compressed_buffer     = encode->packed_buffer;
             encode->compressed_bytes      = encode->packed_bytes;
             encode->compressed_alloc_size = 0;
-            encode->chunk.gdeflate_page_count = 0;
 
             encode->packed_sample_count_table      = encode->sample_count_table;
             encode->packed_sample_count_alloc_size = 0;

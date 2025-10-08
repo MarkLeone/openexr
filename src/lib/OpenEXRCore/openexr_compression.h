@@ -85,8 +85,6 @@ exr_result_t exr_compress_buffer_gdeflate (
     size_t              in_bytes,
     void*               out,
     size_t              out_bytes_avail,
-    size_t              out_page_count,
-    size_t              out_page_size,
     size_t*             actual_out);
 
 /** Decompresses a buffer using gdeflate compression. */
