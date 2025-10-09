@@ -441,7 +441,8 @@ newTileCompressor (
 
         case GDEFLATE_COMPRESSION:
 
-            ret = new GdeflateCompressor (hdr, tileLineSize, numTileLines);
+            ret = new GdeflateCompressor (
+                hdr, tileLineSize, static_cast<int> (numTileLines));
             break;
 
         default: break;
