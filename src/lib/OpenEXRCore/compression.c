@@ -13,6 +13,7 @@
 #include "internal_coding.h"
 #include "internal_file.h"
 #include "internal_huf.h"
+#include "internal_xdr.h"
 
 #include "OpenEXRConfigInternal.h"
 
@@ -358,11 +359,12 @@ exr_compress_buffer_gdeflate (
              * followed by contiguous compressed page data.
              */
             metadata    = (uint32_t*) out_base;
-            metadata[0] = (uint32_t) page_count;
+            metadata[0] = one_from_native32 ((uint32_t) page_count);
 
             for (i = 0; i < page_count; ++i)
             {
-                metadata[i + 1] = (uint32_t) out_pages[i].nbytes;
+                metadata[i + 1] = one_from_native32 (
+                    (uint32_t) out_pages[i].nbytes);
                 total_compressed += out_pages[i].nbytes;
             }
 
@@ -414,7 +416,7 @@ exr_uncompress_buffer_gdeflate (
     if (in_bytes < sizeof (uint32_t)) return EXR_ERR_CORRUPT_CHUNK;
 
     metadata      = (const uint32_t*) in_base;
-    page_count    = metadata[0];
+    page_count    = one_to_native32 (metadata[0]);
     metadata_size = sizeof (uint32_t) * (1 + page_count);
 
     if (page_count == 0 || in_bytes < metadata_size) return EXR_ERR_CORRUPT_CHUNK;
@@ -436,7 +438,7 @@ exr_uncompress_buffer_gdeflate (
 
         for (i = 0; i < page_count; ++i)
         {
-            uint32_t page_size = metadata[i + 1];
+            uint32_t page_size = one_to_native32 (metadata[i + 1]);
 
             if (offset + page_size > in_bytes - metadata_size)
             {
